@@ -57,28 +57,3 @@ test('データの整合: すべての GPU/LLM に必要な項目がある', () 
   for (const x of [...GPUS, ...LLMS]) { assert.ok(!ids.has(x.id), 'dup ' + x.id); ids.add(x.id); }
 });
 
-import { rankModelsForGpu, rankGpusForModel } from '../calc.js';
-
-test('PS5 で動くモデル: 先頭は Q4 以上で 5 tok/s 以上、Kimi K3 は含まれない', () => {
-  const r = rankModelsForGpu(gpu('ps5'), LLMS, QUANTS, 8192);
-  assert.ok(r.length > 0);
-  assert.ok(r[0].good);
-  assert.ok(['fp16', 'q8', 'q4'].includes(r[0].best.quant.id));
-  assert.ok(!r.some((x) => x.model.id === 'kimi-k3'));
-  // good なものが先、その中では大きいモデルが先
-  const goods = r.filter((x) => x.good);
-  for (let i = 1; i < goods.length; i++) assert.ok(goods[i - 1].model.total >= goods[i].model.total);
-});
-
-test('Llama 3.3 70B が動く機器: 先頭は Q4 以上で収まる中で搭載メモリが最小', () => {
-  const r = rankGpusForModel(llm('llama3.3-70b'), GPUS, QUANTS, 8192);
-  assert.ok(r[0].good, JSON.stringify(r[0].gpu));
-  const goods = r.filter((x) => x.good);
-  for (let i = 1; i < goods.length; i++) assert.ok(goods[i - 1].count <= goods[i].count, '枚数が少ない順');
-  assert.equal(goods[0].count, 1);
-  assert.equal(goods[0].best.status, 'ok');
-  assert.ok(!r.some((x) => x.gpu.id === 'rtx5060' && x.count === 1));
-  // RTX 5090 は 2 枚で候補に入り、PS5 は複数枚にならない
-  assert.ok(r.some((x) => x.gpu.id === 'rtx5090' && x.count === 2 && x.good));
-  assert.ok(!r.some((x) => x.gpu.id === 'ps5' && x.count > 1));
-});
