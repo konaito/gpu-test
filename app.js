@@ -175,8 +175,8 @@ async function streamChat(model, messages, onDelta, { fallbacks = [], onReasonin
       model,
       ...(fallbacks.length ? { models: [model, ...fallbacks.filter((m) => m !== model)] } : {}),
       messages, stream: true, max_tokens: 4000,
-      // 思考モデルは思考で時間を使い切るので短めにする
-      reasoning: { effort: 'low' },
+      // 思考なしで答えさせる（Nemotron 3 Ultra free で実測: 思考ありは約17秒、なしは約4秒で回答開始）
+      reasoning: { enabled: false },
     }),
   });
   if (!res.ok) {
