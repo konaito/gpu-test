@@ -122,6 +122,14 @@ select { width: 100%; padding: 10px 36px 10px 12px; border: 1px solid var(--line
 .judge-head h2 { margin: 0; font-size: 18px; display: inline-flex; align-items: center; gap: 8px; }
 .judge-head .eyebrow { margin-bottom: 2px; }
 .hero { margin-bottom: 18px; }
+.hero .k { display: block; font-size: 13px; color: var(--muted); }
+.hero-speed { font-size: 40px; font-weight: 800; line-height: 1.2; margin-top: 2px; min-height: 48px; display: flex; align-items: center; gap: 12px; }
+.hero-speed .idle { color: var(--muted); }
+.hero-speed .loading { font-size: 18px; font-weight: 500; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+.hero-speed .loading .spin { width: 20px; height: 20px; border: 2.5px solid var(--line); border-top-color: var(--fg); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.hero-speed .no { color: var(--no); }
+.hero-speed .unknown { color: var(--muted); font-size: 28px; }
 .hero .vtext { font-size: 17px; }
 .hero .small { margin: 8px 0 0; }
 .result .vword { font-size: 28px; }
