@@ -267,7 +267,7 @@ ${table}
 3. 落とし穴（メモリ不足、ソフトウェア対応、熱、電源、ドライバなど）
 4. 代替案（量子化、モデル、機器の変更）
 
-日本語で、見出しなしの短い段落と箇条書きで、全体で400字程度。わからないことは「わからない」と書いてください。`;
+日本語で、見出しなしの短い段落と箇条書きで、全体で400字程度。Markdown記法（** や # など）は使わず、プレーンテキストで書いてください。わからないことは「わからない」と書いてください。`;
 }
 
 el.judgeBtn.addEventListener('click', async () => {
@@ -280,9 +280,11 @@ el.judgeBtn.addEventListener('click', async () => {
   ];
   const run = async () => {
     let first = true; let thinking = 0; let used = null;
+    let raw = '';
     const got = await streamChat(el.judgeModel.value, messages, (d) => {
       if (first) { el.judgeOut.textContent = ''; first = false; }
-      el.judgeOut.textContent += d;
+      raw += d;
+      el.judgeOut.textContent = raw.replace(/\*\*/g, '');
     }, {
       fallbacks: JUDGE_FALLBACKS,
       onReasoning: (r, m) => { used = m; thinking += r.length; if (first) el.judgeOut.textContent = `考え中…（${m || el.judgeModel.value}、思考 ${thinking} 文字）`; },
