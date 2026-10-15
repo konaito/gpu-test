@@ -3,106 +3,159 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GPU × ローカルLLM 可否チェック</title>
-<meta name="description" content="GPUとオープンウェイトLLMの組み合わせを選ぶと、VRAMに収まるかと推定tok/sを計算し、OpenRouterの無料モデルで所見と会話を試せる。">
+<title>LLM Check</title>
+<meta name="description" content="そのGPUで、そのモデルは動く？ GPUとオープンウェイトLLMの組み合わせでメモリ可否と推定tok/sを概算し、OpenRouterの無料モデルに所見を聞く。">
 <link rel="stylesheet" href="style.css?v=__BUILD__">
 </head>
 <body>
 <header class="top">
-  <h1>GPU × ローカルLLM 可否チェック</h1>
-  <p class="lead">買う前・運用する前に、そのGPUでそのモデルが動くかを概算する。判定はブラウザ内の計算で、OpenRouterの無料モデルに所見を聞ける。</p>
+  <div class="brand">
+    <h1>LLM Check</h1>
+    <p>そのGPUで、そのモデルは動く？</p>
+  </div>
+  <nav class="nav">
+    <button type="button" class="link" id="help-btn">使い方</button>
+    <a class="link" href="https://github.com/konaito/gpu-test" target="_blank" rel="noopener">GitHub</a>
+    <button type="button" class="icon" id="theme-btn" aria-label="テーマを切り替える" title="テーマを切り替える">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </nav>
 </header>
 
-<main class="grid">
-  <section class="card" id="select-card">
-    <h2>組み合わせを選ぶ</h2>
-    <label>GPU / 機器
+<main class="layout">
+  <aside class="card panel">
+    <div class="field">
+      <label for="gpu">1. GPU / 機器</label>
       <select id="gpu"></select>
-    </label>
-    <label>枚数
-      <select id="count"></select>
-    </label>
-    <label>LLM
+    </div>
+    <div class="field">
+      <span class="label">2. 枚数</span>
+      <div class="seg" id="count" role="radiogroup"></div>
+    </div>
+    <div class="field">
+      <label for="llm">3. LLM</label>
       <select id="llm"></select>
-    </label>
-    <label>量子化（判定の基準）
+    </div>
+    <div class="field">
+      <label for="quant">4. 量子化</label>
       <select id="quant"></select>
-    </label>
-    <label>コンテキスト長
-      <select id="ctx"></select>
-    </label>
-    <p class="muted" id="gpu-note"></p>
-  </section>
+    </div>
+    <div class="field">
+      <span class="label">5. コンテキスト長</span>
+      <div class="seg" id="ctx" role="radiogroup"></div>
+    </div>
+    <div class="cta">
+      <button type="button" class="primary big" id="judge-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8zM5 17l.9 2.1L8 20l-2.1.9L5 23l-.9-2.1L2 20l2.1-.9z"/></svg>
+        判定して、AIの所見を聞く
+        <span class="chev">›</span>
+      </button>
+      <p class="muted small">OpenRouterの無料モデルに質問します。<br>回答は推測であり、動作保証ではありません。</p>
+    </div>
+  </aside>
 
-  <section class="card" id="result-card">
-    <h2>判定</h2>
-    <div id="verdict" class="verdict"></div>
-    <div id="summary" class="summary"></div>
-    <div id="bar" class="bar" aria-hidden="true"></div>
-    <div id="legend" class="legend"></div>
-    <table id="quant-table" class="qt">
-      <thead><tr><th>量子化</th><th>必要メモリ</th><th>判定</th><th>推定 tok/s</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <p id="advice" class="advice"></p>
-    <details class="formula">
-      <summary>計算式と前提</summary>
-      <ul>
-        <li>必要メモリ = 総パラメータ数 × 量子化のバイト数 + KVキャッシュ + ランタイム 0.8 GB</li>
-        <li>KVキャッシュ = 層数（規模から概算）× 4 KB × コンテキスト長</li>
-        <li>使えるメモリ = 搭載メモリ × 使用可能率（統合メモリはOS分を引く）× 枚数</li>
-        <li>推定 tok/s = 帯域 × 帯域効率 ÷（活性パラメータ数 × バイト数 + KVの半分）。単体での生成速度で、バッチ処理やプリフィルは含まない</li>
-        <li>複数枚はテンソル並列を仮定し、帯域は枚数 × 0.8 で合算する</li>
-        <li>量子化のバイト数は Gemma 3 27B と Llama 3.3 70B の GGUF 実ファイルサイズで校正した</li>
-        <li>PS5 の帯域効率は「GPUで27Bを約20 tok/s」というX投稿の報告値に合わせた。未検証</li>
-      </ul>
-      <p>どれも概算で、実測ではない。数値の出典は <a id="llm-src" href="#" target="_blank" rel="noopener">OpenRouterのモデルページ</a> と各社の公開仕様。</p>
-    </details>
-  </section>
-
-  <section class="card wide" id="suggest-card">
-    <h2>より良い組み合わせ</h2>
-    <p class="muted">同じ計算式で全候補を総当たりした結果。緑は Q4_K_M 以上で収まり 5 tok/s 以上。機器は枚数が少なく、余裕があり、合計メモリが小さい順。独立GPUは4枚まで試す。行を押すと上の選択に反映する。</p>
-    <div class="two">
-      <div>
-        <h3 id="sg-models-title">この機器で動くモデル</h3>
-        <table class="qt" id="sg-models"><thead><tr><th>モデル</th><th>量子化</th><th>推定 tok/s</th></tr></thead><tbody></tbody></table>
+  <section class="right">
+    <div class="card judge">
+      <div class="judge-head">
+        <div>
+          <p class="eyebrow">実用判断（AIの所見）</p>
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="spark"><path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/></svg>
+            実際に動くか
+          </h2>
+        </div>
+        <select id="judge-model" aria-label="所見を出すモデル"></select>
       </div>
-      <div>
-        <h3 id="sg-gpus-title">このモデルが動く機器</h3>
-        <table class="qt" id="sg-gpus"><thead><tr><th>機器</th><th>量子化</th><th>推定 tok/s</th></tr></thead><tbody></tbody></table>
+      <div class="hero" id="hero">
+        <div class="verdict-row">
+          <span class="vicon none" id="hero-icon">?</span>
+          <span class="vword none" id="hero-word">未判定</span>
+        </div>
+        <p class="vtext" id="hero-text">左の「判定して、AIの所見を聞く」を押すと、ソフトウェア対応や実行環境の制約まで含めた見立てをここに出します。</p>
+        <p class="muted small" id="hero-note">AIの回答は推測であり、動作保証ではありません。計算上の試算は下の「計算上の判定」にあります。</p>
+      </div>
+      <div class="judge-body" id="judge-body" hidden>
+        <div class="avatar" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="11" r="1.2" fill="currentColor"/><circle cx="15" cy="11" r="1.2" fill="currentColor"/><path d="M9 15.5c1.5 1 4.5 1 6 0"/></svg>
+        </div>
+        <div class="bubble">
+          <div class="j-main" id="j-main"></div>
+          <div class="box risk" id="j-risks" hidden>
+            <h3><span class="bi">!</span> 主なリスク</h3>
+            <ul></ul>
+          </div>
+          <div class="box alt" id="j-alts" hidden>
+            <h3><span class="bi">i</span> 代替案</h3>
+            <ul></ul>
+          </div>
+          <div class="j-status" id="j-status"></div>
+        </div>
       </div>
     </div>
-  </section>
 
-  <section class="card" id="judge-card">
-    <h2>無料AIの所見</h2>
-    <p class="muted">「この機器でこのモデルを動かすとどうか」という固定の質問に、選んだ組み合わせと上の計算結果を添えて無料モデルに聞く。回答はストリーミングで表示する。モデルの推測で、保証はない。</p>
-    <label>所見を出すモデル（無料）
-      <select id="judge-model"></select>
-    </label>
-    <button id="judge-btn" class="primary">所見を聞く</button>
-    <div id="judge-out" class="out" aria-live="polite"></div>
-  </section>
-
-
-  <section class="card" id="key-card">
-    <h2>設定</h2>
-    <p class="muted">既定のキーは公開用で、OpenRouter側で上限 0.1 USD に固定してある。無料モデルは 0 USD で動くが、1日あたりのリクエスト数に上限がある。枠が尽きたら自分のキーを入れる。キーはこのブラウザの localStorage にだけ保存する。</p>
-    <label>自分の OpenRouter API キー（任意）
-      <input id="api-key" type="password" placeholder="sk-or-v1-..." autocomplete="off">
-    </label>
-    <div class="row">
-      <button id="key-save">保存</button>
-      <button id="key-clear">既定に戻す</button>
-      <span id="key-status" class="muted"></span>
+    <div class="card result">
+      <p class="eyebrow">計算上の判定（根拠となる試算）</p>
+      <div class="verdict-row">
+        <span class="vicon" id="verdict-icon"></span>
+        <span class="vword" id="verdict-word"></span>
+      </div>
+      <p class="vtext" id="verdict-text"></p>
+      <hr>
+      <div class="stats">
+        <div class="stat"><span class="k">必要メモリ</span><span class="v" id="st-need"></span></div>
+        <div class="stat"><span class="k">使えるメモリ（概算）</span><span class="v" id="st-avail"></span></div>
+        <div class="stat"><span class="k">推定速度</span><span class="v" id="st-tps"></span></div>
+        <button type="button" class="ghost" id="detail-btn" aria-expanded="false">詳細を見る <span class="chev-v">⌄</span></button>
+      </div>
+      <div class="detail" id="detail" hidden>
+        <p class="summary" id="summary"></p>
+        <div class="bar" id="bar" aria-hidden="true"></div>
+        <div class="legend" id="legend"></div>
+        <table class="qt" id="quant-table">
+          <thead><tr><th>量子化</th><th>必要メモリ</th><th>判定</th><th>推定 tok/s</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="advice" id="advice"></p>
+        <p class="muted small" id="gpu-note"></p>
+        <p class="muted small">メモリと帯域だけの机上計算で、ソフトウェア対応や実行環境は見ていない。数値の出典: <a id="llm-src" href="#" target="_blank" rel="noopener">OpenRouterのモデルページ</a> と各社の公開仕様。計算式は「使い方」にある。</p>
+      </div>
     </div>
   </section>
 </main>
 
-<footer class="foot">
-  <p>ソース: <a href="https://github.com/konaito/gpu-test" target="_blank" rel="noopener">github.com/konaito/gpu-test</a>。無料モデルへの送信内容はOpenRouterと提供元に記録される。個人情報は送らない。</p>
-</footer>
+<dialog id="help" class="help">
+  <div class="help-head">
+    <h2>使い方</h2>
+    <button type="button" class="icon" id="help-close" aria-label="閉じる">×</button>
+  </div>
+  <ol>
+    <li>左でGPU（または機器）、枚数、LLM、量子化、コンテキスト長を選ぶ。「計算上の判定」はその場で更新される。これはメモリと帯域だけの試算で、根拠にすぎない。</li>
+    <li>「判定して、AIの所見を聞く」を押すと、組み合わせと試算をOpenRouterの無料モデルに送り、ソフトウェア対応や実行環境まで含めた「実際に動くか」の見立てを一番上に出す。AIの回答も推測で、動作保証ではない。</li>
+    <li>「詳細を見る」で、量子化ごとの必要メモリと推定速度の一覧を見る。</li>
+  </ol>
+  <h3>計算式と前提</h3>
+  <ul>
+    <li>必要メモリ = 総パラメータ数 × 量子化のバイト数 + KVキャッシュ + ランタイム 0.8 GB</li>
+    <li>KVキャッシュ = 層数（規模から概算）× 4 KB × コンテキスト長</li>
+    <li>使えるメモリ = 搭載メモリ × 使用可能率（統合メモリはOS分を引く）× 枚数</li>
+    <li>推定速度 = 帯域 × 帯域効率 ÷（活性パラメータ数 × バイト数 + KVの半分）。単体の生成速度で、プリフィルやバッチは含まない</li>
+    <li>複数枚はテンソル並列を仮定し、帯域は枚数 × 0.8 で合算する</li>
+    <li>量子化のバイト数は Gemma 3 27B と Llama 3.3 70B の GGUF 実ファイルサイズで校正した</li>
+    <li>PS5 の帯域効率は「GPUで27Bを約20 tok/s」というX投稿の報告値に合わせた。未検証</li>
+  </ul>
+  <p class="muted small">どれも概算で、実測ではない。</p>
+  <h3>APIキー</h3>
+  <p class="muted small">既定のキーは公開用で、OpenRouter側で上限 0.1 USD に固定してある。無料モデルは 0 USD で動くが、1日あたりのリクエスト数に上限がある。枠が尽きたら自分のキーを入れる。キーはこのブラウザの localStorage にだけ保存する。</p>
+  <label class="label" for="api-key">自分の OpenRouter API キー（任意）</label>
+  <input id="api-key" type="password" placeholder="sk-or-v1-..." autocomplete="off">
+  <div class="row">
+    <button type="button" id="key-save">保存</button>
+    <button type="button" id="key-clear">既定に戻す</button>
+    <span class="muted small" id="key-status"></span>
+  </div>
+  <p class="muted small">無料モデルへの送信内容はOpenRouterと提供元に記録される。個人情報は送らない。</p>
+</dialog>
+
 <script type="module" src="app.js?v=__BUILD__"></script>
 </body>
 </html>
