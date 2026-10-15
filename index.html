@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU × ローカルLLM 可否チェック</title>
+<meta name="description" content="GPUとオープンウェイトLLMの組み合わせを選ぶと、VRAMに収まるかと推定tok/sを計算し、OpenRouterの無料モデルで所見と会話を試せる。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <h1>GPU × ローカルLLM 可否チェック</h1>
+  <p class="lead">買う前・運用する前に、そのGPUでそのモデルが動くかを概算する。判定はブラウザ内の計算で、OpenRouterの無料モデルに所見を聞いたり、同じモデルの無料版と会話したりできる。</p>
+</header>
+
+<main class="grid">
+  <section class="card" id="select-card">
+    <h2>組み合わせを選ぶ</h2>
+    <label>GPU / 機器
+      <select id="gpu"></select>
+    </label>
+    <label>枚数
+      <select id="count"></select>
+    </label>
+    <label>LLM
+      <select id="llm"></select>
+    </label>
+    <label>量子化（判定の基準）
+      <select id="quant"></select>
+    </label>
+    <label>コンテキスト長
+      <select id="ctx"></select>
+    </label>
+    <p class="muted" id="gpu-note"></p>
+  </section>
+
+  <section class="card" id="result-card">
+    <h2>判定</h2>
+    <div id="verdict" class="verdict"></div>
+    <div id="summary" class="summary"></div>
+    <div id="bar" class="bar" aria-hidden="true"></div>
+    <div id="legend" class="legend"></div>
+    <table id="quant-table" class="qt">
+      <thead><tr><th>量子化</th><th>必要メモリ</th><th>判定</th><th>推定 tok/s</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p id="advice" class="advice"></p>
+    <details class="formula">
+      <summary>計算式と前提</summary>
+      <ul>
+        <li>必要メモリ = 総パラメータ数 × 量子化のバイト数 + KVキャッシュ + ランタイム 0.8 GB</li>
+        <li>KVキャッシュ = 層数（規模から概算）× 4 KB × コンテキスト長</li>
+        <li>使えるメモリ = 搭載メモリ × 使用可能率（統合メモリはOS分を引く）× 枚数</li>
+        <li>推定 tok/s = 帯域 × 帯域効率 ÷（活性パラメータ数 × バイト数 + KVの半分）。単体での生成速度で、バッチ処理やプリフィルは含まない</li>
+        <li>複数枚はテンソル並列を仮定し、帯域は枚数 × 0.8 で合算する</li>
+        <li>量子化のバイト数は Gemma 3 27B と Llama 3.3 70B の GGUF 実ファイルサイズで校正した</li>
+        <li>PS5 の帯域効率は「GPUで27Bを約20 tok/s」というX投稿の報告値に合わせた。未検証</li>
+      </ul>
+      <p>どれも概算で、実測ではない。数値の出典は <a id="llm-src" href="#" target="_blank" rel="noopener">OpenRouterのモデルページ</a> と各社の公開仕様。</p>
+    </details>
+  </section>
+
+  <section class="card" id="judge-card">
+    <h2>無料AIの所見</h2>
+    <p class="muted">選んだ組み合わせと上の計算結果を、OpenRouterの無料モデルに渡して意見を聞く。回答はモデルの推測で、保証はない。</p>
+    <label>所見を出すモデル（無料）
+      <select id="judge-model"></select>
+    </label>
+    <button id="judge-btn" class="primary">所見を聞く</button>
+    <div id="judge-out" class="out" aria-live="polite"></div>
+  </section>
+
+  <section class="card" id="chat-card">
+    <h2>このモデルと話す</h2>
+    <p class="muted" id="chat-note"></p>
+    <label>会話相手（無料）
+      <select id="chat-model"></select>
+    </label>
+    <div id="chat-log" class="log"></div>
+    <form id="chat-form">
+      <textarea id="chat-in" rows="3" placeholder="例: 日本語で自己紹介して。得意なことは？"></textarea>
+      <div class="row">
+        <button type="submit" class="primary" id="chat-send">送る</button>
+        <button type="button" id="chat-clear">履歴を消す</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" id="key-card">
+    <h2>設定</h2>
+    <p class="muted">既定のキーは公開用で、OpenRouter側で上限 0.1 USD に固定してある。無料モデルは 0 USD で動くが、1日あたりのリクエスト数に上限がある。枠が尽きたら自分のキーを入れる。キーはこのブラウザの localStorage にだけ保存する。</p>
+    <label>自分の OpenRouter API キー（任意）
+      <input id="api-key" type="password" placeholder="sk-or-v1-..." autocomplete="off">
+    </label>
+    <div class="row">
+      <button id="key-save">保存</button>
+      <button id="key-clear">既定に戻す</button>
+      <span id="key-status" class="muted"></span>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>ソース: <a href="https://github.com/konaito/gpu-test" target="_blank" rel="noopener">github.com/konaito/gpu-test</a>。無料モデルへの送信内容はOpenRouterと提供元に記録される。個人情報は送らない。</p>
+</footer>
+<script type="module" src="app.js"></script>
+</body>
+</html>
