@@ -63,3 +63,12 @@ button:disabled { opacity: .5; cursor: default; }
 .err { color: var(--no); }
 .foot { max-width: 1100px; margin: 0 auto; padding: 0 16px 32px; font-size: 12px; color: var(--muted); }
 a { color: var(--accent); }
+
+.card.wide { grid-column: 1 / -1; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+h3 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 500; }
+.qt tr.pick { cursor: pointer; }
+.qt tr.pick:hover td { background: #f3f6fc; }
+.qt td.good { color: var(--ok); font-weight: 600; }
+.qt td.meh { color: var(--muted); }

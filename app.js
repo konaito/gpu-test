@@ -1,5 +1,5 @@
 import { GPUS, LLMS, QUANTS, CONTEXTS } from './data.js?v=__BUILD__';
-import { evaluateAll, fmtGB, fmtTps } from './calc.js?v=__BUILD__';
+import { evaluateAll, fmtGB, fmtTps, rankModelsForGpu, rankGpusForModel } from './calc.js?v=__BUILD__';
 import { DEFAULT_KEY, DEFAULT_JUDGE, SITE_URL, SITE_TITLE } from './config.js?v=__BUILD__';
 
 const OR = 'https://openrouter.ai/api/v1';
@@ -9,6 +9,7 @@ const el = {
   verdict: $('verdict'), summary: $('summary'), bar: $('bar'), legend: $('legend'), qt: $('quant-table').querySelector('tbody'),
   advice: $('advice'), llmSrc: $('llm-src'),
   judgeModel: $('judge-model'), judgeBtn: $('judge-btn'), judgeOut: $('judge-out'),
+  sgModels: $('sg-models').querySelector('tbody'), sgGpus: $('sg-gpus').querySelector('tbody'), sgModelsTitle: $('sg-models-title'), sgGpusTitle: $('sg-gpus-title'),
   apiKey: $('api-key'), keySave: $('key-save'), keyClear: $('key-clear'), keyStatus: $('key-status'),
 };
 
@@ -127,6 +128,34 @@ function render() {
     el.advice.textContent = '';
   }
 
+  renderSuggestions(gpu, llm, ctx, count);
+}
+
+const SG_LIMIT = 10;
+function renderSuggestions(gpu, llm, ctx, count) {
+  el.sgModelsTitle.textContent = `${gpu.name}${count > 1 ? ` × ${count}` : ''} で動くモデル`;
+  el.sgModels.innerHTML = '';
+  const ms = rankModelsForGpu(gpu, LLMS, QUANTS, ctx, count).slice(0, SG_LIMIT);
+  if (!ms.length) el.sgModels.innerHTML = '<tr><td colspan="3">どのモデルも収まらない</td></tr>';
+  for (const x of ms) {
+    const tr = document.createElement('tr');
+    tr.className = 'pick';
+    tr.innerHTML = `<td>${x.model.name}</td><td class="${x.good ? 'good' : 'meh'}">${x.best.quant.label}</td><td>${fmtTps(x.best.tps)}</td>`;
+    tr.addEventListener('click', () => { el.llm.value = x.model.id; el.quant.value = x.best.quant.id; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    el.sgModels.appendChild(tr);
+  }
+
+  el.sgGpusTitle.textContent = `${llm.name} が動く機器`;
+  el.sgGpus.innerHTML = '';
+  const gs = rankGpusForModel(llm, GPUS, QUANTS, ctx).slice(0, SG_LIMIT);
+  if (!gs.length) el.sgGpus.innerHTML = '<tr><td colspan="3">4枚までではどの機器にも収まらない</td></tr>';
+  for (const x of gs) {
+    const tr = document.createElement('tr');
+    tr.className = 'pick';
+    tr.innerHTML = `<td>${x.gpu.name}${x.count > 1 ? ` × ${x.count}` : ''}</td><td class="${x.good ? 'good' : 'meh'}">${x.best.quant.label}</td><td>${fmtTps(x.best.tps)}</td>`;
+    tr.addEventListener('click', () => { el.gpu.value = x.gpu.id; el.count.value = String(x.count); el.quant.value = x.best.quant.id; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    el.sgGpus.appendChild(tr);
+  }
 }
 
 for (const s of [el.gpu, el.count, el.llm, el.quant, el.ctx]) s.addEventListener('change', render);
