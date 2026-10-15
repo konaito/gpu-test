@@ -34,5 +34,5 @@ GPUやゲーム機とオープンウェイトLLMの組み合わせを選ぶと�
 
 ```sh
 python3 -m http.server 8080
-node --test test/
+node --test "test/**/*.test.mjs"
 ```

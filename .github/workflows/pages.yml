@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run tests
-        run: node --test test/
+        run: node --test "test/**/*.test.mjs"
       - name: Inject public OpenRouter key
         env:
           KEY: ${{ secrets.OPENROUTER_PUBLIC_KEY }}
