@@ -60,6 +60,21 @@
     </details>
   </section>
 
+  <section class="card wide" id="suggest-card">
+    <h2>より良い組み合わせ</h2>
+    <p class="muted">同じ計算式で全候補を総当たりした結果。緑は Q4_K_M 以上で収まり 5 tok/s 以上。機器は枚数が少なく、余裕があり、合計メモリが小さい順。独立GPUは4枚まで試す。行を押すと上の選択に反映する。</p>
+    <div class="two">
+      <div>
+        <h3 id="sg-models-title">この機器で動くモデル</h3>
+        <table class="qt" id="sg-models"><thead><tr><th>モデル</th><th>量子化</th><th>推定 tok/s</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div>
+        <h3 id="sg-gpus-title">このモデルが動く機器</h3>
+        <table class="qt" id="sg-gpus"><thead><tr><th>機器</th><th>量子化</th><th>推定 tok/s</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
   <section class="card" id="judge-card">
     <h2>無料AIの所見</h2>
     <p class="muted">「この機器でこのモデルを動かすとどうか」という固定の質問に、選んだ組み合わせと上の計算結果を添えて無料モデルに聞く。回答はストリーミングで表示する。モデルの推測で、保証はない。</p>
