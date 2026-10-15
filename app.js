@@ -208,6 +208,7 @@ async function streamChat(model, messages, onDelta, { fallbacks = [], onModel = 
       ...(fallbacks.length ? { models: [model, ...fallbacks.filter((m) => m !== model)] } : {}),
       messages, stream: true, max_tokens: 2000,
       reasoning: { enabled: false },
+      temperature: 0, // 同じ入力で判定がぶれにくくする（それでも変わりうる）
     }),
   });
   if (!res.ok) { let body = null; try { body = await res.json(); } catch {} throw new Error(errorText(res.status, body)); }
