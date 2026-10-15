@@ -1,6 +1,6 @@
-import { GPUS, LLMS, QUANTS, CONTEXTS } from './data.js';
-import { evaluateAll, fmtGB, fmtTps } from './calc.js';
-import { DEFAULT_KEY, DEFAULT_JUDGE, SITE_URL, SITE_TITLE } from './config.js';
+import { GPUS, LLMS, QUANTS, CONTEXTS } from './data.js?v=__BUILD__';
+import { evaluateAll, fmtGB, fmtTps } from './calc.js?v=__BUILD__';
+import { DEFAULT_KEY, DEFAULT_JUDGE, SITE_URL, SITE_TITLE } from './config.js?v=__BUILD__';
 
 const OR = 'https://openrouter.ai/api/v1';
 const $ = (id) => document.getElementById(id);
