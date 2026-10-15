@@ -67,10 +67,8 @@
         <select id="judge-model" aria-label="所見を出すモデル"></select>
       </div>
       <div class="hero" id="hero">
-        <div class="verdict-row">
-          <span class="vicon none" id="hero-icon">?</span>
-          <span class="vword none" id="hero-word">未判定</span>
-        </div>
+        <span class="k">実際に動かしたときの想定速度</span>
+        <div class="hero-speed" id="hero-speed"><span class="idle">—</span></div>
         <p class="vtext" id="hero-text">左の「判定して、AIの所見を聞く」を押すと、ソフトウェア対応や実行環境の制約まで含めた見立てをここに出します。</p>
         <p class="muted small" id="hero-note">AIの回答は推測であり、動作保証ではありません。計算上の試算は下の「計算上の判定」にあります。</p>
       </div>
@@ -130,7 +128,7 @@
   </div>
   <ol>
     <li>左でGPU（または機器）、枚数、LLM、量子化、コンテキスト長を選ぶ。「計算上の判定」はその場で更新される。これはメモリと帯域だけの試算で、根拠にすぎない。</li>
-    <li>「判定して、AIの所見を聞く」を押すと、組み合わせと試算をOpenRouterの無料モデルに送り、ソフトウェア対応や実行環境まで含めた「実際に動くか」の見立てを一番上に出す。AIの回答も推測で、動作保証ではない。</li>
+    <li>「判定して、AIの所見を聞く」を押すと、組み合わせと試算をOpenRouterの無料モデルに送り、ソフトウェア対応や実行環境まで含めた「実際に動かしたときの想定速度」の見立てを一番上に出す。AIの回答も推測で、動作保証ではない。</li>
     <li>「詳細を見る」で、量子化ごとの必要メモリと推定速度の一覧を見る。</li>
   </ol>
   <h3>計算式と前提</h3>

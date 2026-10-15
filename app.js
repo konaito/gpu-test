@@ -7,7 +7,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   gpu: $('gpu'), count: $('count'), llm: $('llm'), quant: $('quant'), ctx: $('ctx'),
   judgeBtn: $('judge-btn'), judgeModel: $('judge-model'), judgeBody: $('judge-body'),
-  heroIcon: $('hero-icon'), heroWord: $('hero-word'), heroText: $('hero-text'), heroNote: $('hero-note'),
+  heroSpeed: $('hero-speed'), heroText: $('hero-text'), heroNote: $('hero-note'),
   jMain: $('j-main'), jRisks: $('j-risks'), jAlts: $('j-alts'), jStatus: $('j-status'),
   verdictIcon: $('verdict-icon'), verdictWord: $('verdict-word'), verdictText: $('verdict-text'),
   stNeed: $('st-need'), stAvail: $('st-avail'), stTps: $('st-tps'), detailBtn: $('detail-btn'), detail: $('detail'),
@@ -275,8 +275,9 @@ ${table}
 ## 出力形式
 次の4つの見出し行をこの順でそのまま書き、その下に内容を書いてください。見出し以外の記号（**、#、番号付き見出し）は使わないでください。
 
-【実用判定】
-1行目に「動く見込み」「条件付きで動く」「動かない見込み」「わからない」のどれか1つだけを書く。2行目に、その判断の最大の理由を1文で書く。
+【想定速度】
+1行目は数値だけ。実際にこの機器で動かしたときに現実的に期待できる生成速度を「15〜25 tok/s」のように書く。起動できない、または実用にならないと見るなら「0 tok/s」。判断できないなら「わからない」。
+2行目は、その数値になる最大の理由を、具体的な固有名詞を含む1文で書く（例: PS5向けの推論ランタイムが公開されておらず、脱獄とLinux導入が前提になるため）。
 
 【所見】
 この概算が妥当か（過大・過小ならどこが違うか）と、現実に期待できる生成速度とその根拠を、短い段落2つ程度で。
@@ -290,18 +291,23 @@ ${table}
 全体で500字程度の日本語。わからないことは「わからない」と書いてください。`;
 }
 
-const VERDICTS = [
-  ['動く見込み', 'ok', '✓'],
-  ['条件付きで動く', 'tight', '!'],
-  ['動かない見込み', 'no', '×'],
-  ['わからない', 'none', '?'],
-];
 function renderHero(text) {
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return;
-  const hit = VERDICTS.find(([w]) => lines[0].includes(w)) || VERDICTS[3];
-  el.heroIcon.className = `vicon ${hit[1]}`; el.heroIcon.textContent = hit[2];
-  el.heroWord.className = `vword ${hit[1]}`; el.heroWord.textContent = hit[0];
+  const first = lines[0].replace(/^[-・•*]\s*/, '');
+  const m = first.match(/(\d+(?:[.,]\d+)?)\s*(?:[〜~～\-–]\s*(\d+(?:[.,]\d+)?))?\s*(tok\/s|トークン\/秒|tokens?\/s)/i);
+  let html;
+  if (m) {
+    const lo = Number(m[1].replace(',', '.')); const hi = m[2] != null ? Number(m[2].replace(',', '.')) : null;
+    const zero = lo === 0 && (hi == null || hi === 0);
+    const num = hi != null && hi !== lo ? `${lo}〜${hi}` : `${lo}`;
+    html = `<span class="${zero ? 'no' : ''}">${num} <small>tok/s</small></span>`;
+  } else if (/わからない|不明/.test(first)) {
+    html = '<span class="unknown">わからない</span>';
+  } else {
+    html = `<span class="unknown">${first.replace(/[<>&]/g, '')}</span>`;
+  }
+  el.heroSpeed.innerHTML = html;
   el.heroText.textContent = lines.slice(1).join(' ') || '';
   el.heroNote.textContent = `${nameOfModel(el.judgeModel.value)} の推測であり、動作保証ではありません。計算上の試算は下の「計算上の判定」にあります。`;
 }
@@ -312,19 +318,19 @@ function stripMd(s) { return s.replace(/\*\*/g, '').replace(/^#+\s*/gm, ''); }
 // 蓄積テキストを【所見】【リスク】【代替案】に分けて描画する
 function renderJudge(raw) {
   const text = stripMd(raw);
-  const sec = { verdict: '', main: '', risks: '', alts: '' };
-  const re = /【(実用判定|所見|リスク|代替案)】/g;
+  const sec = { speed: '', main: '', risks: '', alts: '' };
+  const re = /【(想定速度|所見|リスク|代替案)】/g;
   const marks = [...text.matchAll(re)];
   if (!marks.length) sec.main = text;
   else {
     sec.main = text.slice(0, marks[0].index);
     for (let i = 0; i < marks.length; i++) {
       const body = text.slice(marks[i].index + marks[i][0].length, marks[i + 1]?.index ?? text.length);
-      const key = marks[i][1] === '実用判定' ? 'verdict' : marks[i][1] === '所見' ? 'main' : marks[i][1] === 'リスク' ? 'risks' : 'alts';
+      const key = marks[i][1] === '想定速度' ? 'speed' : marks[i][1] === '所見' ? 'main' : marks[i][1] === 'リスク' ? 'risks' : 'alts';
       sec[key] += body;
     }
   }
-  renderHero(sec.verdict);
+  renderHero(sec.speed);
   el.jMain.textContent = sec.main.trim();
   for (const [key, box] of [['risks', el.jRisks], ['alts', el.jAlts]]) {
     const items = sec[key].split('\n').map((l) => l.replace(/^\s*[-・•*]\s*/, '').trim()).filter(Boolean);
@@ -339,8 +345,7 @@ el.judgeBtn.addEventListener('click', async () => {
   el.judgeBtn.disabled = true;
   el.judgeBody.hidden = false;
   el.jMain.textContent = ''; el.jRisks.hidden = true; el.jAlts.hidden = true;
-  el.heroIcon.className = 'vicon none'; el.heroIcon.textContent = '…';
-  el.heroWord.className = 'vword none'; el.heroWord.textContent = '判定中';
+  el.heroSpeed.innerHTML = '<span class="loading"><span class="spin"></span>判定中…</span>';
   el.heroText.textContent = '';
   el.heroNote.textContent = 'AIの回答は推測であり、動作保証ではありません。';
   judgedKey = location.hash;
@@ -371,7 +376,7 @@ el.judgeBtn.addEventListener('click', async () => {
         await new Promise((r) => setTimeout(r, 2500));
       }
     }
-    if (!result.got) { el.jStatus.className = 'j-status err'; el.jStatus.textContent = '応答が空だった。モデルを変えて再試行する。'; el.heroWord.textContent = '未判定'; el.heroIcon.textContent = '?'; }
+    if (!result.got) { el.jStatus.className = 'j-status err'; el.jStatus.textContent = '応答が空だった。モデルを変えて再試行する。'; el.heroSpeed.innerHTML = '<span class="idle">—</span>'; }
     else {
       const used = result.usedModel || primary;
       el.jStatus.textContent = used !== primary ? `完了（${nameOf(primary)} が応答しなかったため ${nameOf(used)} が答えた）` : `完了（${nameOf(used)}）`;
@@ -379,7 +384,7 @@ el.judgeBtn.addEventListener('click', async () => {
   } catch (e) {
     el.jStatus.className = 'j-status err';
     el.jStatus.textContent = `${e.message}\n時間をおいて再試行するか、別の無料モデルを選ぶ。`;
-    el.heroWord.textContent = '未判定'; el.heroIcon.textContent = '?';
+    el.heroSpeed.innerHTML = '<span class="idle">—</span>';
   } finally {
     el.judgeBtn.disabled = false;
   }
