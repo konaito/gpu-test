@@ -33,6 +33,9 @@ jobs:
           grep -q "sk-or-" config.js || { echo "injection failed"; exit 1; }
           mkdir -p site
           cp -r index.html style.css app.js calc.js data.js config.js .nojekyll site/
+          # GitHub Pages は 10 分キャッシュするので、ビルドごとに URL を変えて古い JS が残らないようにする
+          sed -i "s|__BUILD__|${GITHUB_SHA::8}|g" site/index.html site/app.js
+          grep -q "__BUILD__" site/index.html site/app.js && { echo "cache-bust failed"; exit 1; } || true
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
