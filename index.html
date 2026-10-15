@@ -10,7 +10,7 @@
 <body>
 <header class="top">
   <h1>GPU × ローカルLLM 可否チェック</h1>
-  <p class="lead">買う前・運用する前に、そのGPUでそのモデルが動くかを概算する。判定はブラウザ内の計算で、OpenRouterの無料モデルに所見を聞いたり、同じモデルの無料版と会話したりできる。</p>
+  <p class="lead">買う前・運用する前に、そのGPUでそのモデルが動くかを概算する。判定はブラウザ内の計算で、OpenRouterの無料モデルに所見を聞ける。</p>
 </header>
 
 <main class="grid">
@@ -62,7 +62,7 @@
 
   <section class="card" id="judge-card">
     <h2>無料AIの所見</h2>
-    <p class="muted">選んだ組み合わせと上の計算結果を、OpenRouterの無料モデルに渡して意見を聞く。回答はモデルの推測で、保証はない。</p>
+    <p class="muted">「この機器でこのモデルを動かすとどうか」という固定の質問に、選んだ組み合わせと上の計算結果を添えて無料モデルに聞く。回答はストリーミングで表示する。モデルの推測で、保証はない。</p>
     <label>所見を出すモデル（無料）
       <select id="judge-model"></select>
     </label>
@@ -70,21 +70,6 @@
     <div id="judge-out" class="out" aria-live="polite"></div>
   </section>
 
-  <section class="card" id="chat-card">
-    <h2>このモデルと話す</h2>
-    <p class="muted" id="chat-note"></p>
-    <label>会話相手（無料）
-      <select id="chat-model"></select>
-    </label>
-    <div id="chat-log" class="log"></div>
-    <form id="chat-form">
-      <textarea id="chat-in" rows="3" placeholder="例: 日本語で自己紹介して。得意なことは？"></textarea>
-      <div class="row">
-        <button type="submit" class="primary" id="chat-send">送る</button>
-        <button type="button" id="chat-clear">履歴を消す</button>
-      </div>
-    </form>
-  </section>
 
   <section class="card" id="key-card">
     <h2>設定</h2>

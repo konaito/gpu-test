@@ -9,12 +9,10 @@ const el = {
   verdict: $('verdict'), summary: $('summary'), bar: $('bar'), legend: $('legend'), qt: $('quant-table').querySelector('tbody'),
   advice: $('advice'), llmSrc: $('llm-src'),
   judgeModel: $('judge-model'), judgeBtn: $('judge-btn'), judgeOut: $('judge-out'),
-  chatModel: $('chat-model'), chatNote: $('chat-note'), chatLog: $('chat-log'), chatForm: $('chat-form'), chatIn: $('chat-in'), chatSend: $('chat-send'), chatClear: $('chat-clear'),
   apiKey: $('api-key'), keySave: $('key-save'), keyClear: $('key-clear'), keyStatus: $('key-status'),
 };
 
 let freeModels = []; // OpenRouter から取った無料モデル一覧
-let chatHistory = [];
 let lastResult = null;
 
 // ---------- セレクト構築 ----------
@@ -129,7 +127,6 @@ function render() {
     el.advice.textContent = '';
   }
 
-  updateChatModel();
 }
 
 for (const s of [el.gpu, el.count, el.llm, el.quant, el.ctx]) s.addEventListener('change', render);
@@ -224,23 +221,8 @@ async function loadFreeModels() {
   freeModels.sort((a, b) => (a.id === DEFAULT_JUDGE ? -1 : b.id === DEFAULT_JUDGE ? 1 : a.name.localeCompare(b.name)));
   fillPlain(el.judgeModel, freeModels, (m) => m.name, (m) => m.id);
   el.judgeModel.value = freeModels.some((m) => m.id === DEFAULT_JUDGE) ? DEFAULT_JUDGE : freeModels[0]?.id;
-  fillPlain(el.chatModel, freeModels, (m) => m.name, (m) => m.id);
-  updateChatModel();
 }
 
-function updateChatModel() {
-  if (!lastResult || !freeModels.length) return;
-  const want = `${lastResult.llm.orId}:free`;
-  const match = freeModels.find((m) => m.id === want || m.id.startsWith(lastResult.llm.orId.replace(/-reasoning$/, '')));
-  if (match) {
-    el.chatModel.value = match.id;
-    el.chatNote.textContent = `選んだ「${lastResult.llm.name}」は OpenRouter に無料エンドポイントがあるので、実際に話して出力の質を確かめられる。ローカルで動かした場合と推論設定は違う。`;
-  } else {
-    el.chatModel.value = el.judgeModel.value || freeModels[0].id;
-    el.chatNote.textContent = `選んだ「${lastResult.llm.name}」には無料エンドポイントがない。別の無料モデルで会話の様子だけ試せる。`;
-  }
-}
-el.judgeModel.addEventListener('change', updateChatModel);
 
 // ---------- 所見 ----------
 function buildJudgePrompt() {
@@ -312,44 +294,6 @@ el.judgeBtn.addEventListener('click', async () => {
     el.judgeBtn.disabled = false;
   }
 });
-
-// ---------- チャット ----------
-function addMsg(role, text) {
-  const d = document.createElement('div');
-  d.className = `m ${role}`;
-  d.innerHTML = `<span class="who"></span><span class="t"></span>`;
-  d.querySelector('.who').textContent = role === 'user' ? 'あなた' : el.chatModel.selectedOptions[0]?.textContent || 'モデル';
-  d.querySelector('.t').textContent = text;
-  el.chatLog.appendChild(d);
-  el.chatLog.scrollTop = el.chatLog.scrollHeight;
-  return d.querySelector('.t');
-}
-
-el.chatForm.addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  const text = el.chatIn.value.trim();
-  if (!text) return;
-  el.chatIn.value = '';
-  chatHistory.push({ role: 'user', content: text });
-  addMsg('user', text);
-  const out = addMsg('assistant', '…');
-  el.chatSend.disabled = true;
-  let acc = '';
-  try {
-    const got = await streamChat(el.chatModel.value, chatHistory.slice(-12), (d) => { acc += d; out.textContent = acc; el.chatLog.scrollTop = el.chatLog.scrollHeight; }, {
-      onReasoning: (r) => { if (!acc) out.textContent = '考え中…'; },
-    });
-    if (!got) out.textContent = '（応答が空だった）';
-    chatHistory.push({ role: 'assistant', content: acc });
-  } catch (e) {
-    out.textContent = e.message; out.classList.add('err');
-    chatHistory.pop();
-  } finally {
-    el.chatSend.disabled = false;
-  }
-});
-el.chatClear.addEventListener('click', () => { chatHistory = []; el.chatLog.innerHTML = ''; });
-el.chatModel.addEventListener('change', () => { chatHistory = []; el.chatLog.innerHTML = ''; });
 
 // ---------- 起動 ----------
 render();
